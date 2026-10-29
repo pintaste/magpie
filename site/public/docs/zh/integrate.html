@@ -85,7 +85,7 @@
     <div class="table-wrap"><table>
       <tr><th>你想要</th><th>做法</th><th>magpie 需要改动</th></tr>
       <tr><td>应用的请求由 magpie 提供服务，并在用量里以自己的名字统计</td><td><a href="#gateway">直接调用网关</a></td><td>无</td></tr>
-      <tr><td>Agents 页面上的一行：自动检测、在那里选模型、断开时还原</td><td><a href="#agent">Agent 适配器</a></td><td>一个 PR</td></tr>
+      <tr><td>Agents 页面上的一行：自动检测、在那里选模型、断开时还原</td><td><a href="#agent">Agent 适配器</a>，或 <a href="#plugins">Agent 插件</a></td><td>一个 PR；插件无需改动</td></tr>
       <tr><td>新的模型来源（订阅、厂商），或改写请求</td><td><a href="#plugins">插件</a></td><td>无</td></tr>
     </table></div>
 
@@ -125,7 +125,7 @@ curl -s http://127.0.0.1:3425/v1/models -H "Authorization: Bearer magpie-acme"</
     <div class="callout"><b>保留用户自己的供应商。</b>把 magpie 作为又一个供应商（名为 Magpie）加在用户已有的供应商旁边，而不是替换它们，这样关掉 magpie 就只是换选另一个供应商。</div>
 
     <h2 id="agent"><a class="anchor" href="#agent">2. 在 Agents 页面占一行</a></h2>
-    <p>magpie 列出的 Agent（Claude Code、Codex、OpenCode、dsh、Alma、Cindy……）都是 <a href="https://github.com/yetone/magpie/tree/main/internal/agent"><code>internal/agent</code></a> 里的适配器，每个一个文件。有了这一行，你的应用会显示自己的名字和图标，安装后自动出现，用户可以从 magpie 的目录里为它选模型（和推理强度），供应商变化时跟着更新，断开时还原你的应用原来的设置。目前没有运行时注册：这一行通过给 magpie 提 PR 加入，随下一个版本发布。</p>
+    <p>magpie 列出的 Agent（Claude Code、Codex、OpenCode、dsh、Alma、Cindy……）都是 <a href="https://github.com/yetone/magpie/tree/main/internal/agent"><code>internal/agent</code></a> 里的适配器，每个一个文件。有了这一行，你的应用会显示自己的名字和图标，安装后自动出现，用户可以从 magpie 的目录里为它选模型（和推理强度），供应商变化时跟着更新，断开时还原你的应用原来的设置。适配器通过给 magpie 提 PR 加入，随下一个版本发布。<a href="#plugins">Agent 插件</a>不需要改动 magpie，用户安装后就有这一行。</p>
     <p>适配器是一个 <a href="https://github.com/yetone/magpie/blob/main/internal/agent/agent.go"><code>Agent</code></a> 值，形态取决于你的应用提供什么：</p>
     <ul>
       <li><b>magpie 编辑你的配置文件</b>（大多数适配器，如 <a href="https://github.com/yetone/magpie/blob/main/internal/agent/fx.go"><code>fx.go</code></a>、<a href="https://github.com/yetone/magpie/blob/main/internal/agent/empryo.go"><code>empryo.go</code></a>）。<code>Dir</code>、<code>Path</code>、<code>Bin</code> 用来检测应用；每个 <code>Field</code>（<code>model</code>、<code>effort</code>……）有 <code>Get</code>、<code>Set</code>、<code>Options</code>。连接时加入一个指向网关、key 为 <code>magpie-&lt;id&gt;</code> 的 <code>magpie</code> 供应商，并把模型设为 magpie 的模型；选回默认或 <code>Unwire</code> 会移除 magpie 的条目并还原原值。只动 magpie 设置的那些键。<code>Notice</code> 提示何时需要重启应用；<code>Sync</code> 更新你的应用保存在文件里的模型列表。</li>
@@ -135,11 +135,12 @@ curl -s http://127.0.0.1:3425/v1/models -H "Authorization: Bearer magpie-acme"</
     <p>一个 PR 需要：适配器及其在 <code>agents.go</code> 里的注册；<code>UA</code>（你的 User-Agent 开头，小写），让用量认得你的调用；<code>internal/gui/assets/icons</code> 里的图标；在临时 <code>HOME</code> 下运行的测试（连接、切换、断开后原文件还原）；参考文档 Agents 表里的一行。最有帮助的是一个稳定、有文档的配置格式或导入链接，以及它在各系统上的位置。</p>
 
     <h2 id="plugins"><a class="anchor" href="#plugins">3. 插件</a></h2>
-    <p>插件是 magpie 运行的 npm 包，由用户在 <span class="ui">设置</span> → <span class="ui">插件</span> 里或用 <code>magpie plugin add &lt;package&gt;</code> 安装。<b>供应商插件</b>（OpenCode 的 <code>auth</code> 钩子或 pi 扩展包）添加一个模型来源，比如 magpie 自己不登录的订阅。<b>网关中间件</b>在请求和回复经过时改写它们。见<a href="/docs/zh/plugins">插件开发</a>。插件不能在 Agents 页面加一行，也不能写别的应用的配置，所以它不是应用注册自己的方式。</p>
+    <p>插件是 magpie 运行的 npm 包，由用户在 <span class="ui">设置</span> → <span class="ui">插件</span> 里或用 <code>magpie plugin add &lt;package&gt;</code> 安装。<b>供应商插件</b>（OpenCode 的 <code>auth</code> 钩子或 pi 扩展包）添加一个模型来源，比如 magpie 自己不登录的订阅。<b>网关中间件</b>在请求和回复经过时改写它们。<b>Agent 插件</b>为 magpie 没有适配器的应用在 Agents 页面加一行：插件写明应用的可执行文件和配置文件（JSON、YAML 或 env）、模型所在的键，以及 <code>connect</code> 为网关写入的内容；选 magpie 的模型时写入这些键，选回应用自己的模型或<span class="ui">断开</span>时把每个键还原。见<a href="/docs/zh/plugins">插件开发</a>（<a href="/docs/zh/plugins#agents">Agent 插件</a>）。</p>
+    <p>Agent 插件编辑的是应用配置文件里的键；只能通过导入链接或本地 API 接收供应商的应用，仍需要<a href="#agent">适配器</a>。magpie 自带 Agent 已用的 id 会被拒绝。</p>
 
     <h2 id="not"><a class="anchor" href="#not">目前没有的</a></h2>
     <ul>
-      <li>没有让别的应用不经用户就把自己注册为 Agent、或安装插件的 API 或链接：插件由用户在 magpie 里安装，Agent 行来自 magpie 源码里的适配器。</li>
+      <li>没有让别的应用不经用户就把自己注册为 Agent、或安装插件的 API 或链接：插件由用户在 magpie 里安装，Agent 行来自 magpie 源码里的适配器，或用户安装的 Agent 插件。</li>
       <li><code>magpie://import</code> 链接添加的是<em>供应商</em>（模型来源及其 key），不是 Agent 或应用：见 <a href="/docs/zh/import">Add to magpie</a>。</li>
     </ul>
 

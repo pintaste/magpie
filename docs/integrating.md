@@ -8,7 +8,7 @@ your own on the Agents page. The web version is
 | You want                                              | Route                          | Change to magpie |
 | ----------------------------------------------------- | ------------------------------ | ---------------- |
 | Your app's requests served by magpie, counted under its own name in Usage | [Talk to the gateway](#1-talk-to-the-gateway) | none |
-| A row on the Agents page: detected, its model picked there, put back on disconnect | [An agent adapter](#2-a-row-on-the-agents-page) | a pull request |
+| A row on the Agents page: detected, its model picked there, put back on disconnect | [An agent adapter](#2-a-row-on-the-agents-page), or an [agent plugin](#3-plugins) | a pull request; none for a plugin |
 | A new model source (a subscription, a vendor), or rewriting requests | [A plugin](#3-plugins) | none |
 
 ## 1. Talk to the gateway
@@ -94,8 +94,9 @@ listed in [`agents.go`](../internal/agent/agents.go). A row gets your
 app's name and icon, shows when your app is installed, lets the user pick
 its model (and reasoning) from magpie's catalog, follows the catalog as
 providers change, and on disconnect puts back what your app had before.
-There is no runtime registration: a row is added by a pull request to
-this repository, and ships in the next release.
+An adapter is added by a pull request to this repository, and ships in
+the next release. An [agent plugin](#3-plugins) adds a row with no change
+to magpie, once the user installs it.
 
 An adapter is an [`Agent`](../internal/agent/agent.go) value. What your
 app offers decides its shape:
@@ -134,7 +135,7 @@ each system.
 ## 3. Plugins
 
 A plugin is an npm package magpie runs; the user installs it from
-Settings → Plugins or with `magpie plugin add <package>`. There are two
+Settings → Plugins or with `magpie plugin add <package>`. There are three
 kinds ([plugin guide](https://usemagpie.ai/docs/plugins)):
 
 - **Provider plugins**, OpenCode's `auth` hook or a pi package: a new
@@ -142,15 +143,24 @@ kinds ([plugin guide](https://usemagpie.ai/docs/plugins)):
   itself. They sign in, list models and make requests.
 - **Gateway middleware**: rewrites requests and replies as they pass
   (`onRequest`, `onAccount`, `onProvider`, `onEvent`, `onResponse`).
+- **Agent plugins**: a row on the Agents page for an app magpie has no
+  adapter for. The plugin names the app's binary and its config file
+  (JSON, YAML or env), the key of the model and what `connect` writes for
+  the gateway; picking one of magpie's models writes them, and the app's
+  own model or Disconnect puts every key back. See
+  [Agent plugins](reference.md#agent-plugins).
 
-A plugin can't add a row to the Agents page or write another app's
-config, so it is not how an app registers itself.
+An agent plugin edits keys in the app's config file; an app that takes a
+provider only through an import link or a local API still needs an
+[adapter](#2-a-row-on-the-agents-page). An id magpie's own agents use is
+refused.
 
 ## What isn't there
 
 - No API or link lets another app register itself as an agent, or install
   a plugin, without the user: plugins are installed in magpie by the user,
-  and agent rows come from adapters in magpie's source.
+  and agent rows come from adapters in magpie's source or from agent
+  plugins the user installed.
 - `magpie://import` links add a *provider* (a source of models, with its
   key), not an agent or an app; see [Import links](reference.md#import-links).
 
